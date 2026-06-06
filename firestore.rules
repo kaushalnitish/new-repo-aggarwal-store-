@@ -1,0 +1,101 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net default closed
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Standard Helper Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // User Schema validation
+    function isValidUser(data) {
+      return data.keys().hasAll(['userId', 'email', 'tier', 'points', 'totalSpent'])
+        && data.userId == request.auth.uid
+        && data.email is string && data.email.size() <= 256
+        && data.tier in ['Bronze', 'Silver', 'Gold', 'Platinum']
+        && (data.points is int || data.points is float) && data.points >= 0
+        && (data.totalSpent is int || data.totalSpent is float) && data.totalSpent >= 0
+        && (!data.keys().contains('name') || (data.name is string && data.name.size() <= 128))
+        && (!data.keys().contains('businessName') || (data.businessName is string && data.businessName.size() <= 128))
+        && (!data.keys().contains('phone') || (data.phone is string && data.phone.size() <= 32))
+        && (!data.keys().contains('photoURL') || (data.photoURL is string && data.photoURL.size() <= 2048))
+        && (!data.keys().contains('deliveryPreferences') || (data.deliveryPreferences is string && data.deliveryPreferences.size() <= 512))
+        && (!data.keys().contains('savedAddresses') || (data.savedAddresses is list && data.savedAddresses.size() <= 20));
+    }
+
+    // Points History Schema validation
+    function isValidPointsHistory(data, userId) {
+      return data.keys().hasAll(['transactionId', 'userId', 'type', 'points', 'createdAt'])
+        && data.userId == userId
+        && data.userId == request.auth.uid
+        && data.transactionId is string && data.transactionId.size() <= 128
+        && data.type in ['earn', 'redeem']
+        && (data.points is int || data.points is float) && data.points >= 0
+        && (!data.keys().contains('amount') || ((data.amount is int || data.amount is float) && data.amount >= 0))
+        && (!data.keys().contains('reason') || (data.reason is string && data.reason.size() <= 256));
+    }
+
+    // Order Schema validation
+    function isValidOrder(data, userId) {
+      return data.keys().hasAll(['orderId', 'userId', 'customerName', 'customerPhone', 'items', 'total', 'createdAt'])
+        && data.userId == userId
+        && data.userId == request.auth.uid
+        && data.orderId is string && data.orderId.size() <= 128
+        && data.customerName is string && data.customerName.size() <= 128
+        && data.customerPhone is string && data.customerPhone.size() <= 32
+        && data.items is list && data.items.size() > 0 && data.items.size() <= 100
+        && (data.total is int || data.total is float) && data.total >= 0
+        && (!data.keys().contains('customerAddress') || (data.customerAddress is string && data.customerAddress.size() <= 1024))
+        && (!data.keys().contains('customerNotes') || (data.customerNotes is string && data.customerNotes.size() <= 1024));
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      // No blanket scraping allowed
+      allow list: if false;
+
+      allow create: if isOwner(userId) && isValidUser(incoming())
+        && (!incoming().keys().contains('createdAt') || (incoming().createdAt is string && incoming().createdAt.size() <= 64))
+        && (!incoming().keys().contains('updatedAt') || (incoming().updatedAt is string && incoming().updatedAt.size() <= 64));
+      allow update: if isOwner(userId) && isValidUser(incoming())
+        && (!incoming().keys().contains('createdAt') || incoming().createdAt == existing().createdAt)
+        && (!incoming().keys().contains('updatedAt') || (incoming().updatedAt is string && incoming().updatedAt.size() <= 64));
+      allow delete: if false;
+
+      match /pointsHistory/{transactionId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(transactionId) && isValidPointsHistory(incoming(), userId)
+          && (!incoming().keys().contains('createdAt') || (incoming().createdAt is string && incoming().createdAt.size() <= 64));
+        allow update, delete: if false;
+      }
+
+      match /orders/{orderId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(orderId) && isValidOrder(incoming(), userId)
+          && (!incoming().keys().contains('createdAt') || (incoming().createdAt is string && incoming().createdAt.size() <= 64));
+        allow update, delete: if false;
+      }
+    }
+  }
+}

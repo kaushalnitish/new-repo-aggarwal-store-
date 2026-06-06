@@ -1,0 +1,6 @@
+{
+  "name": "Aggarwal Wholesale Store",
+  "description": "B2B Confectionery & Kiryana Wholesale store dashboard, catalog, and invoice manager.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

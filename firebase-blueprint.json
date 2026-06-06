@@ -1,0 +1,146 @@
+{
+  "entities": {
+    "users": {
+      "title": "User Profile",
+      "description": "User profile with loyalty details and basic info",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The unique user authentication ID"
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's display name"
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Mobile phone contact number"
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "URL to profile thumbnail picture"
+        },
+        "tier": {
+          "type": "string",
+          "enum": ["Bronze", "Silver", "Gold", "Platinum"],
+          "description": "Loyalty program tier level"
+        },
+        "points": {
+          "type": "number",
+          "description": "Current points balance"
+        },
+        "totalSpent": {
+          "type": "number",
+          "description": "Cumulative expense total in ₹"
+        },
+        "savedAddresses": {
+          "type": "array",
+          "description": "List of saved dispatch addresses"
+        },
+        "businessName": {
+          "type": "string",
+          "description": "The user's business or store name"
+        },
+        "deliveryPreferences": {
+          "type": "string",
+          "description": "The user's preferred delivery instructions"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "email", "tier", "points", "totalSpent"]
+    },
+    "pointsHistory": {
+      "title": "Points Transaction History",
+      "description": "Historical record of points earned/spent",
+      "type": "object",
+      "properties": {
+        "transactionId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["earn", "redeem"]
+        },
+        "points": {
+          "type": "number"
+        },
+        "amount": {
+          "type": "number"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["transactionId", "userId", "type", "points", "createdAt"]
+    },
+    "orders": {
+      "title": "Order History",
+      "description": "Historical record of user orders",
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "customerName": {
+          "type": "string"
+        },
+        "customerPhone": {
+          "type": "string"
+        },
+        "customerAddress": {
+          "type": "string"
+        },
+        "customerNotes": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array"
+        },
+        "total": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["orderId", "userId", "customerName", "customerPhone", "items", "total", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "users",
+      "description": "Stores user profile and loyalty points metrics"
+    },
+    "/users/{userId}/pointsHistory/{transactionId}": {
+      "schema": "pointsHistory",
+      "description": "Subcollection under users storing points mutations"
+    },
+    "/users/{userId}/orders/{orderId}": {
+      "schema": "orders",
+      "description": "Subcollection under users storing user order records"
+    }
+  }
+}
